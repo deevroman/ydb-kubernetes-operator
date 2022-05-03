@@ -51,9 +51,12 @@ jobs:
         sleep 10
     - run: |
         kubectl apply -f samples/minikube/storage.yaml
-        sleep 10
+        sleep 15
         kubectl apply -f samples/minikube/database.yaml
         sleep 15
+    - run: |
+        kubectl get storages.ydb.tech
+        kubectl get databases.ydb.tech
     - run: |
         kubectl logs database-minikube-sample-0 1>&2
     - run: |
