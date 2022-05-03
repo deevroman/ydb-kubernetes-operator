@@ -25,8 +25,6 @@ jobs:
         curl -fsSLO https://storage.googleapis.com/kubernetes-release/release/v1.23.5/bin/linux/amd64/kubectl
         mv kubectl /usr/local/bin/kubectl 
         chmod +x /usr/local/bin/kubectl
-    - name: Build the Docker image
-      run: docker build . --file Dockerfile --tag my-image-name:$(date +%s)
     - name: Kind Cluster
       uses: helm/kind-action@v1.2.0
     - run: |
