@@ -55,6 +55,6 @@ jobs:
         kubectl apply -f samples/minikube/database.yaml
         sleep 15
     - run: |
-        kubuctl logs database-minikube-sample-0
+        kubectl logs database-minikube-sample-0
     - run: |
         kubectl run -v=8 -i --image=cr.yandex/yc/ydb:21.4.30 --rm ydb-cli --restart=Never --command -- /bin/sh -c "ydb  --endpoint grpc://database-minikube-sample-grpc:2135   --database /Root/database-minikube-sample   table query execute --query 'select 1;'"
