@@ -25,23 +25,34 @@ jobs:
         curl -fsSLO https://storage.googleapis.com/kubernetes-release/release/v1.23.5/bin/linux/amd64/kubectl
         mv kubectl /usr/local/bin/kubectl 
         chmod +x /usr/local/bin/kubectl
-    - name: Kind Cluster
-      uses: helm/kind-action@v1.2.0
+    - run: |
+        curl -fsSLO https://github.com/kubernetes-sigs/kind/releases/download/v0.12.0/kind-linux-amd64 && \
+        mv kind-linux-amd64 /usr/local/bin/kind && chmod +x /usr/local/bin/kind
+        kind delete clusters --all
+        echo "kind: Cluster
+        apiVersion: kind.x-k8s.io/v1alpha4
+        nodes:
+        - role: control-plane" > kind.yaml
+        kind create cluster --config kind.yaml
     - run: |
         docker pull k8s.gcr.io/ingress-nginx/kube-webhook-certgen:v1.0
         docker pull cr.yandex/yc/ydb-kubernetes-operator:0.4.10
         docker pull cr.yandex/crptqonuodf51kdj7a7d/ydb:22.2.22
         docker pull cr.yandex/yc/ydb:21.4.30
+    - run: |
         kind load docker-image k8s.gcr.io/ingress-nginx/kube-webhook-certgen:v1.0
         kind load docker-image cr.yandex/yc/ydb-kubernetes-operator:0.4.10
         kind load docker-image cr.yandex/crptqonuodf51kdj7a7d/ydb:22.2.22
         kind load docker-image cr.yandex/yc/ydb:21.4.30
+    - run: |
         helm --debug install ydb-operator ydb/operator --set webhook.patch.image.sha="" --version 0.4.7
         kubectl describe jobs
         kubectl describe pods
         sleep 10
+    - run: |
         kubectl apply -f samples/minikube/storage.yaml
         sleep 10
         kubectl apply -f samples/minikube/database.yaml
         sleep 10
+    - run: |
         kubectl run -i --image=cr.yandex/yc/ydb:21.4.30 --rm ydb-cli --restart=Never --command -- /bin/sh -c "ydb  --endpoint grpc://database-minikube-sample-grpc:2135   --database /Root/database-minikube-sample   table query execute --query 'select 1;'"
