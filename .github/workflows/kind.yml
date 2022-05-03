@@ -1,0 +1,49 @@
+
+name: Docker Image CI
+
+on:
+  push:
+    branches: [ kind ]
+  pull_request:
+    branches: [ kind ]
+
+jobs:
+
+  build:
+
+    runs-on: ubuntu-latest
+
+    steps:
+    - uses: actions/checkout@v3
+    - run: |
+        curl -fsSLO https://get.helm.sh/helm-v3.8.2-linux-amd64.tar.gz
+        tar -zxvf helm-v3.8.2-linux-amd64.tar.gz
+        mv linux-amd64/helm /usr/local/bin/helm
+        helm repo add ydb https://charts.ydb.tech/
+        helm repo update
+    - run: |
+        curl -fsSLO https://storage.googleapis.com/kubernetes-release/release/v1.23.5/bin/linux/amd64/kubectl
+        mv kubectl /usr/local/bin/kubectl 
+        chmod +x /usr/local/bin/kubectl
+    - name: Build the Docker image
+      run: docker build . --file Dockerfile --tag my-image-name:$(date +%s)
+    - name: Kind Cluster
+      uses: helm/kind-action@v1.2.0
+    - run: |
+        docker pull k8s.gcr.io/ingress-nginx/kube-webhook-certgen:v1.0
+        docker pull cr.yandex/yc/ydb-kubernetes-operator:0.4.10
+        docker pull cr.yandex/crptqonuodf51kdj7a7d/ydb:22.2.22
+        docker pull cr.yandex/yc/ydb:21.4.30
+        kind load docker-image k8s.gcr.io/ingress-nginx/kube-webhook-certgen:v1.0
+        kind load docker-image cr.yandex/yc/ydb-kubernetes-operator:0.4.10
+        kind load docker-image cr.yandex/crptqonuodf51kdj7a7d/ydb:22.2.22
+        kind load docker-image cr.yandex/yc/ydb:21.4.30
+        helm --debug install ydb-operator ydb/operator --set webhook.patch.image.sha="" --version 0.4.7
+        kubectl describe jobs
+        kubectl describe pods
+        sleep 10
+        kubectl apply -f samples/minikube/storage.yaml
+        sleep 10
+        kubectl apply -f samples/minikube/database.yaml
+        sleep 10
+        kubectl run -i --image=cr.yandex/yc/ydb:21.4.30 --rm ydb-cli --restart=Never --command -- /bin/sh -c "ydb  --endpoint grpc://database-minikube-sample-grpc:2135   --database /Root/database-minikube-sample   table query execute --query 'select 1;'"
